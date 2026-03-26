@@ -5,8 +5,33 @@
 
 function loadSession() {
     const raw = sessionStorage.getItem("session");
-    const session = JSON.parse(raw);          // No try/catch
-    return session;                            // No field validation
+    if (!raw) {
+        return null;
+    }
+
+    try {
+        const session = JSON.parse(raw);
+
+        if (!session || typeof session !== "object") {
+            return null;
+        }
+
+        const { userId, role, displayName } = session;
+        const isNonEmptyString = (value) => typeof value === "string" && value.trim().length > 0;
+
+        if (!isNonEmptyString(userId) || !isNonEmptyString(role) || !isNonEmptyString(displayName)) {
+            return null;
+        }
+
+        return {
+            userId: userId.trim(),
+            role: role.trim(),
+            displayName: displayName.trim()
+        };
+    } catch (err) {
+        console.warn("loadSession: invalid JSON in sessionStorage", err);
+        return null;
+    }
 }
 
 
