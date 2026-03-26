@@ -75,9 +75,22 @@ function saveDashboardState() {
 
 
 async function fetchIncidents() {
-    const res  = fetch("/api/incidents");      // Missing await
-    const data = res.json();                   // Missing await; res is a Promise
-    return data;
+    try {
+        const res = await fetch("/api/incidents");
+        if (!res.ok) {
+            throw new Error("fetchIncidents: network response was not ok " + res.status);
+        }
+
+        const data = await res.json();
+        if (!Array.isArray(data)) {
+            throw new Error("fetchIncidents: expected an array of incidents");
+        }
+
+        return data;
+    } catch (err) {
+        console.error("fetchIncidents failed", err);
+        return [];
+    }
 }
 
 
@@ -97,11 +110,18 @@ function renderIncidents(incidents) {
 
     incidents.forEach(function (incident) {
         const item = document.createElement("li");
-        // UNSAFE – directly inserts API response as HTML
-        item.innerHTML =
-            "<strong>" + incident.title + "</strong>" +
-            " <span class='severity severity-" + incident.severity + "'>" +
-            incident.severity + "</span>";
+
+        const strong = document.createElement("strong");
+        strong.textContent = title;
+        item.appendChild(strong);
+
+        const severitySpan = document.createElement("span");
+        severitySpan.className = "severity severity-" + severity;
+        severitySpan.textContent = severity;
+
+        item.appendChild(document.createTextNode(" "));
+        item.appendChild(severitySpan);
+
         container.appendChild(item);
     });
 }
