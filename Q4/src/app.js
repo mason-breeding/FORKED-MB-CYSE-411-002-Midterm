@@ -5,8 +5,33 @@
 
 function loadSession() {
     const raw = sessionStorage.getItem("session");
-    const session = JSON.parse(raw);          // No try/catch
-    return session;                            // No field validation
+    if (!raw) {
+        return null;
+    }
+
+    try {
+        const session = JSON.parse(raw);
+
+        if (!session || typeof session !== "object") {
+            return null;
+        }
+
+        const { userId, role, displayName } = session;
+        const isNonEmptyString = (value) => typeof value === "string" && value.trim().length > 0;
+
+        if (!isNonEmptyString(userId) || !isNonEmptyString(role) || !isNonEmptyString(displayName)) {
+            return null;
+        }
+
+        return {
+            userId: userId.trim(),
+            role: role.trim(),
+            displayName: displayName.trim()
+        };
+    } catch (err) {
+        console.warn("loadSession: invalid JSON in sessionStorage", err);
+        return null;
+    }
 }
 
 
@@ -17,10 +42,17 @@ function loadSession() {
 //  execute in the viewer's browser (stored XSS).
 
 
+function sanitizeStatusMessage(message) {
+    if (typeof message !== "string") {
+        return "";
+    }
+    return message.trim().replace(/[\x00-\x1F\x7F]+/g, "");
+}
+
 function renderStatusMessage(containerElement, message) {
-    const p = document.createElement("p")
-    p.textContent = message
-    containerElement.appendChild(p);   // UNSAFE
+    const p = document.createElement("p");
+    p.textContent = message;
+    containerElement.appendChild(p);   // SAFE via textContent
 }
 
 
@@ -104,7 +136,8 @@ document.addEventListener("DOMContentLoaded", function () {
         statusContainer.className = "status";
 
         // Q4.A – fix this call
-        renderStatusMessage(statusContainer, profile.status);
+        const sanitizedStatus = sanitizeStatusMessage(profile.status);
+        renderStatusMessage(statusContainer, sanitizedStatus);
 
         card.appendChild(nameEl);
         card.appendChild(deptEl);
